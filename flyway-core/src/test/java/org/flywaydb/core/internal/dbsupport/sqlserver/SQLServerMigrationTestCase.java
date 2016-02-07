@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2015 Axel Fontaine
+ * Copyright 2010-2016 Boxfuse GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,6 +71,20 @@ public abstract class SQLServerMigrationTestCase extends MigrationTestCase {
         flyway.migrate();
 
         assertEquals("Hello", jdbcTemplate.queryForString("SELECT value FROM test_data"));
+
+        flyway.clean();
+
+        // Running migrate again on an unclean database, triggers duplicate object exceptions.
+        flyway.migrate();
+    }
+
+    /**
+     * Tests clean and migrate for SQL Server Functions.
+     */
+    @Test
+    public void function() throws Exception {
+        flyway.setLocations("migration/dbsupport/sqlserver/sql/function");
+        flyway.migrate();
 
         flyway.clean();
 

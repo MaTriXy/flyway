@@ -1,5 +1,5 @@
 /**
- * Copyright 2010-2015 Axel Fontaine
+ * Copyright 2010-2016 Boxfuse GmbH
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import org.flywaydb.core.api.resolver.ResolvedMigration;
 import org.flywaydb.core.migration.MigrationTestCase;
 import org.flywaydb.core.internal.util.jdbc.DriverDataSource;
 import org.flywaydb.core.internal.util.jdbc.JdbcUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -234,6 +235,21 @@ public class PostgreSQLMigrationMediumTest extends MigrationTestCase {
     }
 
     /**
+     * Tests clean and migrate for PostgreSQL Materialized Views.
+     */
+    @Ignore("PostgreSQL 9.3 and newer only")
+    @Test
+    public void materializedview() throws Exception {
+        flyway.setLocations("migration/dbsupport/postgresql/sql/materializedview");
+        flyway.migrate();
+
+        flyway.clean();
+
+        // Running migrate again on an unclean database, triggers duplicate object exceptions.
+        flyway.migrate();
+    }
+
+    /**
      * Tests clean and migrate for PostgreSQL child tables.
      */
     @Test
@@ -320,7 +336,7 @@ public class PostgreSQLMigrationMediumTest extends MigrationTestCase {
     public void copy() throws Exception {
         flyway.setLocations("migration/dbsupport/postgresql/sql/copy");
         flyway.migrate();
-        assertEquals(3, jdbcTemplate.queryForInt("select count(*) from copy_test"));
+        assertEquals(6, jdbcTemplate.queryForInt("select count(*) from copy_test"));
     }
 
     /**
@@ -352,7 +368,7 @@ public class PostgreSQLMigrationMediumTest extends MigrationTestCase {
                 return connection;
             }
         });
-        flyway1.setLocations(BASEDIR);
+        flyway1.setLocations(getBasedir());
         flyway1.setSchemas("public");
         flyway1.migrate();
     }
