@@ -16,8 +16,10 @@
 package org.flywaydb.core.internal.dbsupport.db2;
 
 import org.flywaydb.core.DbCategory;
+import org.flywaydb.core.api.FlywayException;
 import org.flywaydb.core.migration.MigrationTestCase;
 import org.flywaydb.core.internal.util.jdbc.DriverDataSource;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.experimental.categories.Category;
 
@@ -39,12 +41,21 @@ public class DB2MigrationMediumTest extends MigrationTestCase {
         String password = customProperties.getProperty("db2.password", "flyway");
         String url = customProperties.getProperty("db2.url", "jdbc:db2://localhost:50000/flyway");
 
-        return new DriverDataSource(Thread.currentThread().getContextClassLoader(), null, url, user, password);
+        return new DriverDataSource(Thread.currentThread().getContextClassLoader(), null, url, user, password, null);
     }
 
     @Override
     protected String getQuoteLocation() {
         return "migration/quote";
+    }
+
+    @Test
+    @Ignore("Excluding by default as for some reason this test is flaky in Maven even though it is stable in IntelliJ")
+    public void schemaWithDash() throws FlywayException {
+        flyway.setSchemas("my-schema");
+        flyway.setLocations(getBasedir());
+        flyway.clean();
+        flyway.migrate();
     }
 
     @Test
@@ -162,4 +173,25 @@ public class DB2MigrationMediumTest extends MigrationTestCase {
         assertEquals(0, jdbcTemplate.queryForInt("SELECT COUNT(*) FROM SYSCAT.TRIGGERS WHERE TRIGSCHEMA = ?", user.toUpperCase()));
     }
 
+    @Override
+    protected void createFlyway3MetadataTable() throws Exception {
+        jdbcTemplate.execute("CREATE TABLE \"schema_version\" (\n" +
+                "    \"version_rank\" INT NOT NULL,\n" +
+                "    \"installed_rank\" INT NOT NULL,\n" +
+                "    \"version\" VARCHAR(50) NOT NULL,\n" +
+                "    \"description\" VARCHAR(200) NOT NULL,\n" +
+                "    \"type\" VARCHAR(20) NOT NULL,\n" +
+                "    \"script\" VARCHAR(1000) NOT NULL,\n" +
+                "    \"checksum\" INT,\n" +
+                "    \"installed_by\" VARCHAR(100) NOT NULL,\n" +
+                "    \"installed_on\" TIMESTAMP DEFAULT CURRENT TIMESTAMP NOT NULL,\n" +
+                "    \"execution_time\" INT NOT NULL,\n" +
+                "    \"success\" SMALLINT NOT NULL,\n" +
+                "    CONSTRAINT \"schema_version_s\" CHECK (\"success\" in(0,1))\n" +
+                ")");
+        jdbcTemplate.execute("ALTER TABLE \"schema_version\" ADD CONSTRAINT \"schema_version_pk\" PRIMARY KEY (\"version\")");
+        jdbcTemplate.execute("CREATE INDEX \"schema_version_vr_idx\" ON \"schema_version\" (\"version_rank\")");
+        jdbcTemplate.execute("CREATE INDEX \"schema_version_ir_idx\" ON \"schema_version\" (\"installed_rank\")");
+        jdbcTemplate.execute("CREATE INDEX \"schema_version_s_idx\" ON \"schema_version\" (\"success\")");
+    }
 }

@@ -399,14 +399,14 @@ abstract class AbstractFlywayMojo extends AbstractMojo {
      * @required
      * @readonly
      */
-    private Settings settings;
+    /* private -> for testing */ Settings settings;
 
     /**
      * Reference to the current project that includes the Flyway Maven plugin.
      *
      * @parameter property="project" required="true"
      */
-    protected MavenProject mavenProject;
+    /* private -> for testing */ MavenProject mavenProject;
 
     /**
      * Load username password from settings
@@ -414,8 +414,8 @@ abstract class AbstractFlywayMojo extends AbstractMojo {
      * @throws FlywayException when the credentials could not be loaded.
      */
     private void loadCredentialsFromSettings() throws FlywayException {
+        final Server server = settings.getServer(serverId);
         if (user == null) {
-            final Server server = settings.getServer(serverId);
             if (server != null) {
                 user = server.getUsername();
                 try {
@@ -429,6 +429,8 @@ abstract class AbstractFlywayMojo extends AbstractMojo {
                     throw new FlywayException("Unable to initialize password decryption", e);
                 }
             }
+        } else if (server != null) {
+            throw new FlywayException("You specified credentials both in the Flyway config and settings.xml. Use either one or the other");
         }
     }
 
@@ -479,10 +481,12 @@ abstract class AbstractFlywayMojo extends AbstractMojo {
                         locations[i] = Location.FILESYSTEM_PREFIX + file.getAbsolutePath();
                     }
                 }
-                flyway.setLocations(locations);
             } else {
-                locations = new String[] { Location.FILESYSTEM_PREFIX + mavenProject.getBasedir().getAbsolutePath() + "/src/main/resources/db/migration"};
+                locations = new String[] {
+                        Location.FILESYSTEM_PREFIX + mavenProject.getBasedir().getAbsolutePath() + "/src/main/resources/db/migration"
+                };
             }
+            flyway.setLocations(locations);
             flyway.setResolversAsClassNames(resolvers);
             flyway.setSkipDefaultResolvers(skipDefaultResolvers);
             flyway.setCallbacksAsClassNames(callbacks);
@@ -529,12 +533,25 @@ abstract class AbstractFlywayMojo extends AbstractMojo {
             }
             properties.putAll(getConfigFileProperties());
             properties.putAll(System.getProperties());
+            removeMavenPluginSpecificPropertiesToAvoidWarnings(properties);
             flyway.configure(properties);
 
             doExecute(flyway);
         } catch (Exception e) {
             throw new MojoExecutionException(e.toString(), ExceptionUtils.getRootCause(e));
         }
+    }
+
+    /**
+     * Filters there properties to remove the Flyway Maven Plugin-specific ones to avoid warnings.
+     *
+     * @param properties The properties to filter.
+     */
+    private static void removeMavenPluginSpecificPropertiesToAvoidWarnings(Properties properties) {
+        properties.remove("flyway.configFile");
+        properties.remove("flyway.current");
+        properties.remove("flyway.version");
+        properties.remove("flyway.serverId");
     }
 
     /**

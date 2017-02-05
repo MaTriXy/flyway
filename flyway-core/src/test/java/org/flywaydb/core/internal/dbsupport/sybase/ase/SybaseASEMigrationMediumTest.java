@@ -57,7 +57,7 @@ public class SybaseASEMigrationMediumTest extends MigrationTestCase {
         String password = customProperties.getProperty("sybase.password", "test");
         String url = customProperties.getProperty("sybase.jtds_url", "jdbc:jtds:sybase://127.0.0.1:5100/flyway_test");
 
-        return new DriverDataSource(Thread.currentThread().getContextClassLoader(), null, url, user, password);
+        return new DriverDataSource(Thread.currentThread().getContextClassLoader(), null, url, user, password, null);
     }
 
 	@Override
@@ -174,4 +174,9 @@ public class SybaseASEMigrationMediumTest extends MigrationTestCase {
 	protected String getCommentLocation() {
 		return "migration/dbsupport/sybaseASE/comment";
 	}
+
+    @Ignore("Not needed as Sybase ASE support was first introduced in Flyway 4.0")
+    @Override
+    public void upgradeMetadataTableTo40Format() throws Exception {
+    }
 }

@@ -56,7 +56,7 @@ public class RedshiftMigrationMediumTest extends MigrationTestCase {
         // Create an ssh tunnel on port 5439 to your Redshift instance before running this test!
         String url = customProperties.getProperty("postgresql.url", "jdbc:postgresql://localhost:5439/flyway");
 
-        return new DriverDataSource(Thread.currentThread().getContextClassLoader(), null, url, user, password);
+        return new DriverDataSource(Thread.currentThread().getContextClassLoader(), null, url, user, password, null);
     }
 
     @Override
@@ -202,7 +202,7 @@ public class RedshiftMigrationMediumTest extends MigrationTestCase {
         Flyway flyway1 = new Flyway();
         DriverDataSource driverDataSource = (DriverDataSource) dataSource;
         flyway1.setDataSource(new DriverDataSource(Thread.currentThread().getContextClassLoader(),
-                null, driverDataSource.getUrl(), driverDataSource.getUser(), driverDataSource.getPassword()) {
+                null, driverDataSource.getUrl(), driverDataSource.getUser(), driverDataSource.getPassword(), null) {
             @Override
             public Connection getConnection() throws SQLException {
                 Connection connection = super.getConnection();
@@ -219,5 +219,23 @@ public class RedshiftMigrationMediumTest extends MigrationTestCase {
         flyway1.setLocations(getBasedir());
         flyway1.setSchemas("public");
         flyway1.migrate();
+    }
+
+    @Override
+    protected void createFlyway3MetadataTable() throws Exception {
+        jdbcTemplate.execute("CREATE TABLE \"schema_version\" (\n" +
+                "    \"version_rank\" INT NOT NULL,\n" +
+                "    \"installed_rank\" INT NOT NULL,\n" +
+                "    \"version\" VARCHAR(50) NOT NULL,\n" +
+                "    \"description\" VARCHAR(200) NOT NULL,\n" +
+                "    \"type\" VARCHAR(20) NOT NULL,\n" +
+                "    \"script\" VARCHAR(1000) NOT NULL,\n" +
+                "    \"checksum\" INTEGER,\n" +
+                "    \"installed_by\" VARCHAR(100) NOT NULL,\n" +
+                "    \"installed_on\" TIMESTAMP NOT NULL DEFAULT getdate(),\n" +
+                "    \"execution_time\" INTEGER NOT NULL,\n" +
+                "    \"success\" BOOLEAN NOT NULL\n" +
+                ")");
+        jdbcTemplate.execute("ALTER TABLE \"schema_version\" ADD CONSTRAINT \"schema_version_pk\" PRIMARY KEY (\"version\")");
     }
 }
